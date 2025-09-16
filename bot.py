@@ -4,7 +4,7 @@ from pyrogram import Client
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from utils.downloader import download_file
-from utils.file_handler import handle_file_upload, send_progress_bar
+from utils.file_handler import handle_file_upload
 from config.settings import TELEGRAM_API_KEY, API_ID, API_HASH, SESSION_STRING, DUMP_CHANNEL
 
 # Set up logging
@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 # Initialize Pyrogram Client
 app = Client("my_bot_session", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
+# Global variables
 thumbnail_path = None
 users_progress = {}
 
 # Command to set thumbnail for videos
 async def set_thumb(update: Update, context: CallbackContext):
-    global thumbnail_path
     user_id = update.message.from_user.id
     if update.message.reply_to_message and update.message.reply_to_message.photo:
         file = update.message.reply_to_message.photo[-1].get_file()
@@ -46,18 +46,20 @@ async def leech(update: Update, context: CallbackContext):
         # Download the file using the downloader utility
         temp_file_path = download_file(link, user_id)
         
-        # Upload the file to dump channel first
+        # Upload the file to the dump channel first
         file_id = await handle_file_upload(update, context, temp_file_path, filename, user_id)
         
         # Forward to the user from dump channel
-        await app.send_document(user_id, file_id)
+        await app.send_document(DUMP_CHANNEL, file_id)  # Upload to dump channel
+        await app.send_document(user_id, file_id)  # Forward to the user directly
+
         await update.message.reply_text(f"{filename} uploaded and forwarded to you successfully!")
 
         os.remove(temp_file_path)  # Clean up temporary file
     except Exception as e:
         await update.message.reply_text(f"Error: {str(e)}")
 
-# Start the bot with /setthumb and /leech commands
+# Command to greet the user with /start
 async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("Hello! I'm your file leeching bot. Use /leech <link> to download files.")
 
