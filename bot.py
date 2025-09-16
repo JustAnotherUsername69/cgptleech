@@ -47,7 +47,7 @@ async def leech(update: Update, context: CallbackContext):
         
         # Upload the file to Telegram using Pyrogram (User API)
         await update.message.reply_text(f"Uploading {filename}...")
-        file_id = await handle_file_upload(update, context, temp_file_path, filename, user_id)
+        file_id = await handle_file_upload(app, update, context, temp_file_path, filename, user_id)
         
         # Forward to the user from the user account
         await app.send_document(user_id, file_id)  # Upload directly from User account
