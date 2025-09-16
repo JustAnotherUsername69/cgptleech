@@ -4,8 +4,8 @@ from pyrogram import Client
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from utils.downloader import download_file
-from utils.file_handler import handle_file_upload
-from config.settings import TELEGRAM_API_KEY, API_ID, API_HASH, SESSION_STRING
+from utils.file_handler import handle_file_upload, send_progress_bar
+from config.settings import TELEGRAM_API_KEY, API_ID, API_HASH, SESSION_STRING, DUMP_CHANNEL
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -16,14 +16,17 @@ logger = logging.getLogger(__name__)
 app = Client("my_bot_session", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 thumbnail_path = None
+users_progress = {}
 
 # Command to set thumbnail for videos
 async def set_thumb(update: Update, context: CallbackContext):
     global thumbnail_path
+    user_id = update.message.from_user.id
     if update.message.reply_to_message and update.message.reply_to_message.photo:
         file = update.message.reply_to_message.photo[-1].get_file()
         thumbnail_path = file.download()
-        await update.message.reply_text("Thumbnail set successfully.")
+        context.user_data['thumbnail'] = thumbnail_path
+        await update.message.reply_text(f"Thumbnail set successfully for user {user_id}.")
     else:
         await update.message.reply_text("Please reply to a photo with /setthumb to set the thumbnail.")
 
@@ -34,30 +37,36 @@ async def leech(update: Update, context: CallbackContext):
         return
 
     link = context.args[0]
+    user_id = update.message.from_user.id
     filename = f"Tg @StreamersHub {os.path.basename(link)}"
     
     await update.message.reply_text(f"Downloading {filename}...")
 
     try:
         # Download the file using the downloader utility
-        temp_file_path = download_file(link)
-
-        # Upload the file with custom filename
-        await update.message.reply_text(f"Uploading {filename}...")
-        await handle_file_upload(update, context, temp_file_path, filename, thumbnail_path)
+        temp_file_path = download_file(link, user_id)
+        
+        # Upload the file to dump channel first
+        file_id = await handle_file_upload(update, context, temp_file_path, filename, user_id)
+        
+        # Forward to the user from dump channel
+        await app.send_document(user_id, file_id)
+        await update.message.reply_text(f"{filename} uploaded and forwarded to you successfully!")
 
         os.remove(temp_file_path)  # Clean up temporary file
-        await update.message.reply_text(f"{filename} uploaded successfully!")
-
     except Exception as e:
         await update.message.reply_text(f"Error: {str(e)}")
 
 # Start the bot with /setthumb and /leech commands
+async def start(update: Update, context: CallbackContext):
+    await update.message.reply_text("Hello! I'm your file leeching bot. Use /leech <link> to download files.")
+
 def main():
     # Use Application for handling bot interactions
     application = Application.builder().token(TELEGRAM_API_KEY).build()
 
     # Add command handlers
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("setthumb", set_thumb))
     application.add_handler(CommandHandler("leech", leech))
 
