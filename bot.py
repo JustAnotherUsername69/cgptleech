@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 # Initialize Pyrogram Client
 app = Client("my_bot_session", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
-# Global variables
 thumbnail_path = None
 users_progress = {}
 
@@ -23,8 +22,8 @@ users_progress = {}
 async def set_thumb(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if update.message.reply_to_message and update.message.reply_to_message.photo:
-        file = update.message.reply_to_message.photo[-1].get_file()
-        thumbnail_path = file.download()
+        file = await update.message.reply_to_message.photo[-1].get_file()
+        thumbnail_path = await file.download()
         context.user_data['thumbnail'] = thumbnail_path
         await update.message.reply_text(f"Thumbnail set successfully for user {user_id}.")
     else:
@@ -44,7 +43,7 @@ async def leech(update: Update, context: CallbackContext):
 
     try:
         # Download the file using the downloader utility
-        temp_file_path = download_file(link, user_id)
+        temp_file_path = await download_file(link, user_id)
         
         # Upload the file to the dump channel first
         file_id = await handle_file_upload(update, context, temp_file_path, filename, user_id)
