@@ -1,11 +1,12 @@
 import os
 import logging
+import zipfile
 from pyrogram import Client
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from utils.downloader import download_file
 from utils.file_handler import handle_file_upload
-from config.settings import TELEGRAM_API_KEY, API_ID, API_HASH, SESSION_STRING, DUMP_CHANNEL
+from config.settings import TELEGRAM_API_KEY, API_ID, API_HASH, SESSION_STRING, DUMP_CHANNEL_ID
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -30,9 +31,9 @@ async def set_thumb(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("Please reply to a photo with /setthumb to set the thumbnail.")
 
-# Command to download file from a link and upload to Telegram
+# Command to download file from a link, upload to dump channel, and forward it to the user
 async def leech(update: Update, context: CallbackContext):
-    """Command to leech a file from a provided URL and upload it."""
+    """Command to leech a file from a provided URL and upload it to a dump channel."""
     if len(context.args) < 1:
         await update.message.reply_text("Please provide a download link.")
         return
@@ -47,16 +48,49 @@ async def leech(update: Update, context: CallbackContext):
         # Download the file using the downloader utility
         temp_file_path = await download_file(link, user_id)
         
-        # Upload the file to Telegram using Pyrogram (User API)
-        await update.message.reply_text(f"Uploading {filename}...")
-        file_id = await handle_file_upload(app, update, context, temp_file_path, filename, user_id)
+        # Upload the file to the dump channel
+        file_id = await handle_file_upload(app, update, context, temp_file_path, filename, DUMP_CHANNEL_ID)
         
-        # Forward to the user from the user account
-        await app.send_document(user_id, file_id)  # Upload directly from User account
+        # Forward the uploaded file back to the user
+        forwarded_msg = await app.send_document(user_id, file_id, caption=filename)
+        
+        # Remove the file from VPS after sending
+        os.remove(temp_file_path)
 
         await update.message.reply_text(f"{filename} uploaded and sent to you successfully!")
+    except Exception as e:
+        await update.message.reply_text(f"Error: {str(e)}")
 
-        os.remove(temp_file_path)  # Clean up temporary file
+# Command to download, unzip, and upload individual files
+async def unzipleech(update: Update, context: CallbackContext):
+    """Command to leech and unzip a file before uploading its contents."""
+    if len(context.args) < 1:
+        await update.message.reply_text("Please provide a link to a zip file.")
+        return
+
+    link = context.args[0]
+    user_id = update.message.from_user.id
+    filename = f"Tg @StreamersHub {os.path.basename(link)}"
+    
+    await update.message.reply_text(f"Downloading and unzipping {filename}...")
+
+    try:
+        # Download the zip file
+        zip_file_path = await download_file(link, user_id)
+        
+        # Extract files from the zip
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+            zip_ref.extractall(f'/tmp/{user_id}_unzipped')
+        
+        # Upload each file in the zip to the user
+        for extracted_file in os.listdir(f'/tmp/{user_id}_unzipped'):
+            file_path = os.path.join(f'/tmp/{user_id}_unzipped', extracted_file)
+            file_id = await handle_file_upload(app, update, context, file_path, extracted_file, DUMP_CHANNEL_ID)
+            await app.send_document(user_id, file_id, caption=extracted_file)
+            os.remove(file_path)  # Remove each file after uploading
+
+        os.remove(zip_file_path)  # Remove the original zip file
+        await update.message.reply_text(f"All files from {filename} have been uploaded successfully!")
     except Exception as e:
         await update.message.reply_text(f"Error: {str(e)}")
 
@@ -77,6 +111,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("setthumb", set_thumb))
     application.add_handler(CommandHandler("leech", leech))
+    application.add_handler(CommandHandler("unzipleech", unzipleech))
 
     # Start the bot
     application.run_polling()
