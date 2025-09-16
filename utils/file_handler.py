@@ -3,7 +3,7 @@ from pyrogram import Client
 from tqdm import tqdm
 
 # Function to upload files (large files handled by Pyrogram)
-async def handle_file_upload(update, context, file_path, filename, user_id):
+async def handle_file_upload(app: Client, update, context, file_path, filename, user_id):
     """
     Uploads the downloaded file to Telegram with the given filename and optional thumbnail.
     """
