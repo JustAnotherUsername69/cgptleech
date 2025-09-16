@@ -63,10 +63,8 @@ async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("Hello! I'm your file leeching bot. Use /leech <link> to download files.")
 
 def main():
-    # Ensure app is initialized properly for user API
-    if not app.is_initialized:
-        logger.error("Pyrogram Client is not initialized properly. Exiting.")
-        return
+    # Run the Pyrogram Client to ensure it's initialized and ready for use
+    app.start()  # Start the client (necessary to initialize it properly)
 
     # Use Application for handling bot interactions
     application = Application.builder().token(TELEGRAM_API_KEY).build()
