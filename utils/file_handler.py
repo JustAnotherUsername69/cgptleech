@@ -1,6 +1,6 @@
 import os
-from tqdm import tqdm
 from pyrogram import Client
+from tqdm import tqdm
 
 # Function to upload files (large files handled by Pyrogram)
 async def handle_file_upload(update, context, file_path, filename, user_id):
@@ -15,7 +15,6 @@ async def handle_file_upload(update, context, file_path, filename, user_id):
             f,
             caption=filename
         )
-        
         # Update progress during upload
         progress_bar.update(os.path.getsize(file_path))
         progress_bar.close()
