@@ -9,3 +9,6 @@ SESSION_STRING = "BQAT3JQAoQWG5zOFKKKHLROZmXCrZd2gnODeHetyDQCkL636ajqKujr5DwkmjP
 
 # Bot API Token from BotFather
 TELEGRAM_API_KEY = "8452403186:AAG5gb3pE2bI2G29tn3vdIJ-A5XTtyFXuH4"
+
+# The dump channel where files will be uploaded first
+DUMP_CHANNEL = "-1002729711653"  # Replace with your dump channel username or ID
