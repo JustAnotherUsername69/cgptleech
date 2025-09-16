@@ -23,7 +23,7 @@ async def set_thumb(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if update.message.reply_to_message and update.message.reply_to_message.photo:
         file = await update.message.reply_to_message.photo[-1].get_file()  # Await file retrieval
-        thumbnail_path = await file.download()  # Await the download
+        thumbnail_path = file.download()  # Download file synchronously
         context.user_data['thumbnail'] = thumbnail_path
         await update.message.reply_text(f"Thumbnail set successfully for user {user_id}.")
     else:
