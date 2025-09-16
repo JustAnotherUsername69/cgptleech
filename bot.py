@@ -12,7 +12,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Pyrogram Client
+# Initialize Pyrogram Client (User API)
 app = Client("my_bot_session", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 thumbnail_path = None
@@ -23,7 +23,7 @@ async def set_thumb(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if update.message.reply_to_message and update.message.reply_to_message.photo:
         file = await update.message.reply_to_message.photo[-1].get_file()  # Await file retrieval
-        thumbnail_path = file.download()  # Download file synchronously
+        thumbnail_path = await file.download()  # Download file synchronously
         context.user_data['thumbnail'] = thumbnail_path
         await update.message.reply_text(f"Thumbnail set successfully for user {user_id}.")
     else:
@@ -45,14 +45,14 @@ async def leech(update: Update, context: CallbackContext):
         # Download the file using the downloader utility
         temp_file_path = await download_file(link, user_id)
         
-        # Upload the file to the dump channel first
+        # Upload the file to Telegram using Pyrogram (User API)
+        await update.message.reply_text(f"Uploading {filename}...")
         file_id = await handle_file_upload(update, context, temp_file_path, filename, user_id)
         
-        # Forward to the user from dump channel
-        await app.send_document(DUMP_CHANNEL, file_id)  # Upload to dump channel
-        await app.send_document(user_id, file_id)  # Forward to the user directly
+        # Forward to the user from the user account
+        await app.send_document(user_id, file_id)  # Upload directly from User account
 
-        await update.message.reply_text(f"{filename} uploaded and forwarded to you successfully!")
+        await update.message.reply_text(f"{filename} uploaded and sent to you successfully!")
 
         os.remove(temp_file_path)  # Clean up temporary file
     except Exception as e:
