@@ -35,3 +35,4 @@ async def handle_file_upload(app: Client, update, context, file_path, filename, 
         progress_bar.close()
 
     return upload.document.file_id
+    return upload.document.file_id
